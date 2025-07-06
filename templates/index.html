@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Background Remover</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e1e1e;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+    input[type="file"],
+    input[type="text"] {
+      margin: 20px 10px;
+      padding: 10px;
+      width: 80%;
+      max-width: 400px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background: crimson;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    img {
+      margin-top: 30px;
+      max-width: 90%;
+      border-radius: 12px;
+    }
+    a.download-btn {
+      display: block;
+      margin-top: 20px;
+      background: seagreen;
+      color: white;
+      padding: 10px 18px;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    .loader {
+      border: 5px solid #444;
+      border-top: 5px solid crimson;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 30px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🪄 AI Background Remover</h1>
+
+  <form id="uploadForm">
+    <input type="file" id="fileInput" accept="image/*" />
+    <br>
+    <button type="submit">Remove Background (File)</button>
+  </form>
+
+  <hr style="margin: 40px 0; border-color: #555;">
+
+  <div>
+    <input type="text" id="urlInput" placeholder="Paste Image URL (e.g. https://...)" />
+    <br>
+    <button onclick="removeFromUrl()">Remove Background (URL)</button>
+  </div>
+
+  <div class="loader" id="loader"></div>
+
+  <div id="result">
+    <img id="outputImage" style="display:none;" />
+    <a id="downloadBtn" class="download-btn" style="display:none;" download="removed-bg.png">⬇️ Download Result</a>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const form = document.getElementById('uploadForm');
+    const loader = document.getElementById('loader');
+    const outputImage = document.getElementById('outputImage');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const urlInput = document.getElementById('urlInput');
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) return alert("Please choose a file first.");
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      loader.style.display = "block";
+      outputImage.style.display = "none";
+      downloadBtn.style.display = "none";
+
+      try {
+        const res = await fetch('/remove-bg', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error("Failed to remove background");
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        outputImage.src = url;
+        outputImage.style.display = "block";
+        downloadBtn.href = url;
+        downloadBtn.style.display = "block";
+      } catch (err) {
+        alert("Something went wrong.");
+      } finally {
+        loader.style.display = "none";
+      }
+    };
+
+    async function removeFromUrl() {
+      const imageUrl = urlInput.value.trim();
+      if (!imageUrl) return alert("Please paste an image URL.");
+
+      loader.style.display = "block";
+      outputImage.style.display = "none";
+      downloadBtn.style.display = "none";
+
+      try {
+        const res = await fetch('/remove-bg-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image_url: imageUrl })
+        });
+
+        if (!res.ok) throw new Error("URL image failed.");
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        outputImage.src = url;
+        outputImage.style.display = "block";
+        downloadBtn.href = url;
+        downloadBtn.style.display = "block";
+      } catch (err) {
+        alert("URL error: Something went wrong.");
+      } finally {
+        loader.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
