@@ -30,6 +30,7 @@ def remove_bg():
     except Exception as e:
         return {'error': str(e)}, 500
 
+# 🔥 This part is critical for Render to detect the port
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Render auto-assigns PORT
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))  # ✅ Render assigns this
+    app.run(host='0.0.0.0', port=port)         # ✅ Expose the correct port
