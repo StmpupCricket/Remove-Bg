@@ -1,36 +1,54 @@
 import os
-from flask import Flask, request, send_file
-from rembg import remove
-from PIL import Image
 import io
+import requests
+from flask import Flask, request, send_file, jsonify, render_template
+from flask_cors import CORS
+from PIL import Image
+from rembg import remove
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/')
 def home():
-    return "✅ Remove Background API is running."
+    return render_template("index.html")
 
 @app.route('/remove-bg', methods=['POST'])
-def remove_bg():
+def remove_bg_upload():
     if 'image' not in request.files:
-        return {'error': 'No image uploaded'}, 400
+        return jsonify({'error': 'No image file uploaded'}), 400
 
     image_file = request.files['image']
-    
     try:
         input_image = Image.open(image_file.stream).convert("RGBA")
         output_image = remove(input_image)
-
         img_io = io.BytesIO()
         output_image.save(img_io, 'PNG')
         img_io.seek(0)
-
         return send_file(img_io, mimetype='image/png')
-
     except Exception as e:
-        return {'error': str(e)}, 500
+        return jsonify({'error': str(e)}), 500
 
-# 🔥 This part is critical for Render to detect the port
+@app.route('/remove-bg-url', methods=['POST'])
+def remove_bg_url():
+    data = request.get_json()
+    image_url = data.get('image_url')
+    if not image_url:
+        return jsonify({'error': 'Missing image_url'}), 400
+
+    try:
+        response = requests.get(image_url)
+        if response.status_code != 200:
+            return jsonify({'error': 'Failed to fetch image'}), 400
+        input_image = Image.open(io.BytesIO(response.content)).convert("RGBA")
+        output_image = remove(input_image)
+        img_io = io.BytesIO()
+        output_image.save(img_io, 'PNG')
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/png')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # ✅ Render assigns this
-    app.run(host='0.0.0.0', port=port)         # ✅ Expose the correct port
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
